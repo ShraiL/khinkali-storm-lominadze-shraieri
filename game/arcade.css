@@ -31,3 +31,6 @@ label[for=difficulty]{margin-top:9px}
 #swing{position:absolute;z-index:1;bottom:2%;left:50%;transform:translateX(-50%);white-space:nowrap;padding:9px 20px;border-radius:22px;background:#ffcf67;border:2px solid #5e3621;font-weight:bold;color:#40251a}
 #swing:disabled{opacity:.75}
 @media(max-width:480px){.slotbar{gap:6px;font-size:10px}.slotbar small{max-width:90px}.stage{min-height:530px}}
+#swing{width:min(96%,620px);display:flex;justify-content:center;gap:4px;flex-wrap:wrap;background:#292031;border-color:#9c7453;border-radius:14px;padding:6px}
+#swing button{color:#fff1d7;background:#493348;border:1px solid #986e64;padding:8px;border-radius:8px;font-size:12px;font-weight:bold}
+#swing button[data-move=finish]{background:#aa322d}
