@@ -84,8 +84,8 @@ The supplied variable-based proxy configuration allows the game to start even
 when the leaderboard is unavailable. No startup dependency is required.
 
 Compose prefixes the declared network and volume names with the project name:
-`khinkali-storm-schreier_khinkali-net` and
-`khinkali-storm-schreier_leaderboard-data` by default.
+`khinkali-storm-lominadze-shraieri_khinkali-net` and
+`khinkali-storm-lominadze-shraieri_leaderboard-data` by default.
 
 ### Leaderboard behavior
 
@@ -150,7 +150,7 @@ Additional feature files: `game/js/api.js` handles HTTP/status/table rendering;
 
 ## Submission
 
-Repository: https://github.com/ShraiL/khinkali-storm-schreier
+Repository: https://github.com/ShraiL/khinkali-storm-lominadze-shraieri
 
 Submit the repository URL and the open PR URL. **Do not merge the PR.** Main must
 remain the standalone game without `leaderboard/` or `docker-compose.yml`.
