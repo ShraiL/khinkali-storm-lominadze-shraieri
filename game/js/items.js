@@ -1,4 +1,5 @@
 export const TYPES = {
+  herb: { points: 0, damage: 0, speed: 1 },
   normal: { points: 10, damage: 0, speed: 1, color: '#fff8e7' },
   gold: { points: 50, damage: 0, speed: 1.5, color: '#edba32' },
   pepper: { points: 0, damage: 1, speed: 1, color: '#e64a27' },
@@ -6,7 +7,7 @@ export const TYPES = {
 
 export function spawnItem(width, random = Math.random) {
   const roll = random();
-  const type = roll < 0.08 ? 'gold' : roll < 0.30 ? 'pepper' : 'normal';
+  const type = roll < 0.08 ? 'gold' : roll < 0.30 ? 'pepper' : roll < 0.35 ? 'herb' : 'normal';
   return { type, x: 24 + random() * (width - 48), y: -25, previousY: -25, radius: 20 };
 }
 
@@ -26,11 +27,11 @@ export function hitsPlate(item, plate) {
 export function drawItem(ctx, item) {
   ctx.save();
   ctx.translate(item.x, item.y);
-  if (item.type === 'pepper') {
+  if (item.type === 'pepper' || item.type === 'herb') {
     ctx.font = '36px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🌶️', 0, 0);
+    ctx.fillText(item.type === 'herb' ? '🌿' : '🌶️', 0, 0);
   } else {
     // A pleated Georgian dumpling, drawn without external images.
     ctx.fillStyle = TYPES[item.type].color;

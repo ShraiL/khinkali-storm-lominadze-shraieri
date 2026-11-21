@@ -1,9 +1,13 @@
+import { mountainScene } from './scenery.js';
 import { Player } from './player.js';
 import { TYPES, spawnItem, moveItem, hitsPlate, drawItem } from './items.js';
 import { initializeUI, playerName, showScreen, updateHUD, finishGame } from './ui.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const backdrop = mountainScene(canvas.width, canvas.height);
+let slowTime = 0;
+let catchLabel = null;
 const keys = new Set();
 let player = new Player(canvas.width, canvas.height);
 let items = [];
@@ -21,6 +25,8 @@ function startGame() {
   document.activeElement?.blur();
   player = new Player(canvas.width, canvas.height);
   items = [];
+  slowTime = 0;
+  catchLabel = null;
   score = 0;
   lives = 3;
   level = 1;
@@ -42,15 +48,21 @@ function update(seconds) {
   const direction = Number(keys.has('arrowright') || keys.has('d')) -
     Number(keys.has('arrowleft') || keys.has('a'));
   player.update(seconds, direction, canvas.width);
-  spawnTimer -= seconds;
+  slowTime = Math.max(0, slowTime - seconds);
+  if (catchLabel) catchLabel.time -= seconds;
+  const fallSeconds = seconds * (slowTime > 0 ? 0.5 : 1);
+  spawnTimer -= fallSeconds;
   if (spawnTimer <= 0) {
     items.push(spawnItem(canvas.width));
     spawnTimer = Math.max(0.3, 0.8 - (level - 1) * 0.04);
   }
   for (let i = items.length - 1; i >= 0; i--) {
     const item = items[i];
-    moveItem(item, seconds, level);
+    moveItem(item, fallSeconds, level);
     if (hitsPlate(item, player)) {
+      if (item.type === 'herb') slowTime = 5;
+      const label = { normal: '+10', gold: '+50', pepper: '−1 ♥', herb: 'Slow!' };
+      catchLabel = { text: label[item.type], x: player.x + player.width / 2, time: 0.8 };
       score += TYPES[item.type].points;
       lives -= TYPES[item.type].damage;
       level = Math.floor(score / 200) + 1;
@@ -69,17 +81,14 @@ function update(seconds) {
 }
 
 function draw() {
-  ctx.fillStyle = '#e8e2d3';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = '#d8cfbd';
-  ctx.lineWidth = 1;
-  for (let x = 20; x < canvas.width; x += 40) {
-    for (let y = 20; y < canvas.height; y += 40) {
-      ctx.beginPath(); ctx.moveTo(x - 2, y); ctx.lineTo(x + 2, y); ctx.stroke();
-    }
+  ctx.drawImage(backdrop, 0, 0);
+  ctx.font = 'bold 23px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff6dc';
+  if (slowTime > 0) ctx.fillText('Tarragon · ' + Math.ceil(slowTime) + 's', canvas.width / 2, 36);
+  if (catchLabel && catchLabel.time > 0) {
+    ctx.fillText(catchLabel.text, catchLabel.x, player.y - 55 + catchLabel.time * 35);
   }
-  ctx.fillStyle = '#d2c5ae';
-  ctx.fillRect(0, canvas.height - 32, canvas.width, 32);
   for (const item of items) drawItem(ctx, item);
   player.draw(ctx);
 }
