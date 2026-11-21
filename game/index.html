@@ -10,7 +10,7 @@
 </head>
 <body>
   <main class="app">
-    <header class="masthead"><a href="./" class="brand">KS<span>Khinkali Storm</span></a><span class="edition">TBILISI ARCADE / 01</span></header>
+    <header class="masthead"><a href="./" class="brand">KS<span>Khinkali Storm</span></a><span id="connection" class="connection" role="status">● Checking leaderboard…</span></header>
     <div class="layout">
       <section class="game-column" aria-label="Khinkali Storm game">
         <div class="hud"><div>SCORE<strong id="score">0000</strong></div><div>LEVEL<strong id="level">01</strong></div><div>LIVES<strong id="lives" aria-label="3 lives">♥ ♥ ♥</strong></div><button id="pause" type="button" disabled>Pause II</button></div>
@@ -26,7 +26,7 @@
           <section id="gameover" class="overlay" hidden>
             <span class="eyebrow">THAT WAS A FEAST</span><h2>STORM<br><span>OVER.</span></h2>
             <p class="result"><strong id="final-score">0</strong> POINTS</p><small>PERSONAL BEST <b class="best">0</b></small>
-            <button id="replay" class="primary" type="button">PLAY AGAIN <span>↗</span></button><button id="home" class="secondary" type="button">Back to menu</button>
+            <p id="save-status" role="status"></p><button id="replay" class="primary" type="button">PLAY AGAIN <span>↗</span></button><button id="home" class="secondary" type="button">Back to menu</button>
           </section>
           <section id="paused" class="overlay" hidden><span class="eyebrow">TAKE A BREATHER</span><h2>ON<br><span>PAUSE.</span></h2><button id="resume" class="primary" type="button">KEEP CATCHING ↗</button></section>
         </div>
@@ -35,7 +35,10 @@
       </section>
       <aside>
         <section class="rules"><span class="eyebrow">THE MENU</span><h2>Good food.<br>Fast hands.</h2><div class="food"><span>🥟</span><div><b>THE CLASSIC</b><p>Comfort food. Catch it.</p></div><strong>+10</strong></div><div class="food"><span class="gold">🥟</span><div><b>GOLDEN KHINKALI</b><p>Rare, golden & extra fast.</p></div><strong>+50</strong></div><div class="food"><span>🌶️</span><div><b>TOO HOT</b><p>Let this one go.</p></div><strong>−1 ♥</strong></div><p class="rule-note">Three lives. Every 200 points,<br>the storm picks up speed.</p></section>
-        <div class="stamp">HANDMADE CHAOS<br><span>ხინკლის ქარიშხალი</span></div>
+        <section class="leaderboard" aria-label="Top ten leaderboard">
+          <span class="eyebrow">THE HUNGRY TEN</span><h2>High scores.</h2>
+          <p id="leaderboard-message">Loading scores…</p><ol id="leaders"></ol>
+        </section>
       </aside>
     </div>
     <footer><span>MADE FOR A GOOD CATCH.</span><span>DEVOPS MIDTERM · LASCHA SCHREIER</span></footer>

@@ -1,3 +1,4 @@
+import { startLeaderboard, refreshLeaderboard, submitScore } from './api.js';
 import { Player } from './player.js';
 import { TYPES, spawnItem, moveItem, hitsPlate, drawItem } from './items.js';
 import { initializeUI, playerName, showScreen, updateHUD, finishGame } from './ui.js';
@@ -14,11 +15,14 @@ let state = 'menu';
 let spawnTimer = 0;
 let previousTime = 0;
 let name = '';
+let round = 0;
 
 function startGame() {
   name = playerName();
   if (!name) return;
   document.activeElement?.blur();
+  round++;
+  document.getElementById('save-status').textContent = ''; 
   player = new Player(canvas.width, canvas.height);
   items = [];
   score = 0;
@@ -60,6 +64,15 @@ function update(seconds) {
         state = 'gameover';
         keys.clear();
         finishGame(score);
+        const finishedRound = round;
+        document.getElementById('save-status').textContent = 'Saving your score…';
+        submitScore(name, score).then((saved) => {
+          if (round === finishedRound) {
+            document.getElementById('save-status').textContent = saved
+              ? 'Score added to the leaderboard.'
+              : 'Score not uploaded. Your personal best is saved in this browser when storage is available.';
+          }
+        });
         return;
       }
     } else if (item.y > canvas.height + item.radius) {
@@ -98,7 +111,7 @@ document.getElementById('start-form').addEventListener('submit', (event) => {
 });
 document.getElementById('replay').addEventListener('click', startGame);
 document.getElementById('home').addEventListener('click', () => {
-  state = 'menu'; showScreen(state); document.getElementById('name').focus();
+  state = 'menu'; showScreen(state); refreshLeaderboard(); document.getElementById('name').focus();
 });
 for (const id of ['pause', 'resume']) document.getElementById(id).addEventListener('click', togglePause);
 window.addEventListener('keydown', (event) => {
@@ -124,5 +137,6 @@ for (const [id, key] of [['left', 'arrowleft'], ['right', 'arrowright']]) {
   }
 }
 initializeUI();
+startLeaderboard();
 showScreen('menu');
 requestAnimationFrame(frame);
