@@ -18,6 +18,7 @@ let name = '';
 function startGame() {
   name = playerName();
   if (!name) return;
+  document.activeElement?.blur();
   player = new Player(canvas.width, canvas.height);
   items = [];
   score = 0;
