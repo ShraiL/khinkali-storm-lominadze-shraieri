@@ -16,7 +16,7 @@
       <section class="game-column" aria-label="Khinkali Storm game">
         <div class="hud"><div>SCORE<strong id="score">0000</strong></div><div>LEVEL<strong id="level">01</strong></div><div>LIVES<strong id="lives" aria-label="3 lives">♥ ♥ ♥</strong></div><button id="pause" type="button" disabled>Pause II</button></div>
         <div class="slotbar"><span>GOLD JACKPOT</span><div id="slots" aria-label="0 of 3 golden khinkali"><b>🥟</b><b>🥟</b><b>🥟</b></div><small>Fill all three to duel the boss</small></div>
-        <div class="stage"><button id="swing" type="button" hidden>Swing sword · Space</button>
+        <div class="stage"><div id="swing" aria-label="Fight controls" hidden><button type="button" data-move="jump">Jump ↑</button><button type="button" data-move="roll">Roll ⇧</button><button type="button" data-move="sword">Sword · Space</button><button type="button" data-move="clone">Clones Q</button><button type="button" data-move="orb">Rasengan E</button><button type="button" data-move="finish">Fatality F</button></div>
           <canvas id="game" width="800" height="620" aria-label="Catch dumplings with the plate. Use left/right arrows or A/D."></canvas>
           <section id="menu" class="overlay">
             <span class="eyebrow">A LITTLE TASTE OF CHAOS</span>

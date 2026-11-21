@@ -153,8 +153,12 @@ function frame(time) {
       lives--;
       updateHUD(score,lives,level);
       return lives;
-    });
-    swing.disabled = !duel.open || Boolean(duel.ending);
+    }, Number(keys.has("d") || keys.has("arrowright")) - Number(keys.has("a") || keys.has("arrowleft")));
+    for (const button of swing.querySelectorAll('button')) {
+      const move = button.dataset.move;
+      button.hidden = (move === 'finish') !== (duel.phase === 'finish');
+      button.disabled = Boolean(duel.ending) || duel.cool[move] > 0;
+    }
     if (outcome === 'loss') endRound();
     if (outcome === 'win') {
       gold = 0;
@@ -176,12 +180,15 @@ document.getElementById('home').addEventListener('click', () => {
   state = 'menu'; showScreen(state); refreshLeaderboard(); document.getElementById('name').focus();
 });
 for (const id of ['pause', 'resume']) document.getElementById(id).addEventListener('click', togglePause);
-swing.addEventListener('click', () => { if (state === 'duel') duel.swing(); });
+swing.addEventListener('click', event => {
+  if (state === 'duel' && event.target.dataset.move) duel.act(event.target.dataset.move);
+});
+const actions = { Space:'sword', ArrowUp:'jump', KeyW:'jump', ShiftLeft:'roll', ShiftRight:'roll', KeyQ:'clone', KeyE:'orb', KeyF:'finish' };
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement) return;
-  if (state === 'duel' && event.code === 'Space') {
+  if (state === 'duel' && actions[event.code]) {
     event.preventDefault();
-    if (!event.repeat) duel.swing();
+    if (!event.repeat) duel.act(actions[event.code]);
     return;
   }
   const key = event.key.toLowerCase();

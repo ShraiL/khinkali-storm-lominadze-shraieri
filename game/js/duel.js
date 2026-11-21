@@ -1,93 +1,141 @@
-// One sword swing per opening. Missing it costs one of the player's lives.
+import { boss } from './boss-art.js';
+
 export const difficulties = {
-  easy: { speed: .8, opening: 1.5, health: 2 },
-  medium: { speed: 1, opening: .95, health: 3 },
-  hard: { speed: 1.25, opening: .60, health: 4 },
+  easy: { speed: .8, warning: 1.5, health: 7 },
+  medium: { speed: 1, warning: 1.1, health: 10 },
+  hard: { speed: 1.25, warning: .8, health: 14 },
 };
+const attacks = ['Ground wave · Jump!', 'Pepper drop · Move!', 'Body charge · Roll!'];
+const ground = 465;
+const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
 
 export class Duel {
   constructor(settings) {
     this.settings = settings;
     this.hp = settings.health;
-    this.elapsed = 0;
-    this.flash = 0;
+    this.x = 155;
+    this.bx = 648;
+    this.height = this.velocity = this.roll = this.slash = this.hit = 0;
+    this.cool = { sword:0, roll:0, clone:0, orb:0 };
+    this.shots = [];
+    this.attack = 0;
+    this.phase = 'warning';
+    this.time = 0;
+    this.target = this.x;
     this.ending = null;
-    this.bite = 0;
   }
-  get open() { return this.elapsed >= 1; }
-
-  swing() {
-    if (this.ending || !this.open) return;
-    this.hp--;
-    this.elapsed = 0;
-    this.flash = .35;
-    if (!this.hp) this.ending = 'win';
-  }
-
-  tick(dt, hurt) {
-    if (this.ending) {
-      this.bite += dt;
-      return this.bite >= 1.6 ? this.ending : null;
+  act(move) {
+    if(this.phase === 'finish') {
+      if(move === 'finish') { this.ending='win'; this.time=0; this.phase='ending'; }
+      return;
     }
-    this.flash = Math.max(0, this.flash - dt);
-    this.elapsed += dt;
-    if (this.elapsed > 1 + this.settings.opening) {
-      this.elapsed = 0;
-      if (hurt() === 0) this.ending = 'loss';
+    if(this.ending || this.cool[move]>0) return;
+    if(move==='jump' && this.height===0) this.velocity=610;
+    if(move==='roll') { this.roll=.4; this.cool.roll=1.1; }
+    if(move==='sword') {
+      this.slash=.24; this.cool.sword=.42;
+      if(Math.abs(this.bx-this.x)<162) this.damage(1);
+    }
+    if(move==='orb' || move==='clone') {
+      this.cool[move]=move==='orb'?3:4;
+      this.shots.push({move,x:this.x,y:this.height});
+    }
+  }
+  damage(amount) {
+    this.hp=Math.max(0,this.hp-amount);
+    if(this.hp===0) { this.phase='finish'; this.time=0; this.shots=[]; }
+  }
+  tick(dt,hurt,direction=0) {
+    this.time+=dt;
+    if(this.ending) return this.time>=2 ? this.ending : null;
+    if(this.phase==='finish') return null;
+    for(const move in this.cool) this.cool[move]=Math.max(0,this.cool[move]-dt);
+    this.slash=Math.max(0,this.slash-dt);
+    this.hit=Math.max(0,this.hit-dt);
+    this.roll=Math.max(0,this.roll-dt);
+    this.x=clamp(this.x+dt*(this.roll>0?-480:direction*310),35,644);
+    this.velocity-=1450*dt;
+    this.height=Math.max(0,this.height+this.velocity*dt);
+    if(this.height===0) this.velocity=0;
+    for(const shot of this.shots) shot.x+=dt*(shot.move==='orb'?510:360);
+    const arrived=this.shots.filter(s=>s.x>=this.bx-65);
+    this.shots=this.shots.filter(s=>s.x<this.bx-65);
+    for(const shot of arrived) {
+      this.damage(shot.move==='orb'?3:2);
+      if(this.phase==='finish') return null;
+    }
+    if(this.phase==='warning' && this.time>=this.settings.warning) {
+      this.phase='strike'; this.time=0; this.connected=false; this.wave=this.bx-75;
+    }
+    if(this.phase==='strike') {
+      const pace=this.settings.speed;
+      let contact=false, done=false;
+      if(this.attack===0) {
+        this.wave-=dt*540*pace;
+        contact=Math.abs(this.wave-this.x)<37 && this.height<55;
+        done=this.wave < -45;
+      } else if(this.attack===1) {
+        contact=this.time>=.42 && this.time<.68 && Math.abs(this.target-this.x)<63;
+        done=this.time>=.72;
+      } else {
+        this.bx=Math.max(70,this.bx-dt*610*pace);
+        contact=Math.abs(this.bx-this.x)<85;
+        done=this.bx<=70;
+      }
+      if(contact && !this.connected && !this.roll) {
+        this.connected=true; this.hit=.35;
+        if(hurt()===0) { this.phase='ending'; this.ending='loss'; this.time=0; }
+      }
+      if(done && !this.ending) { this.phase='recover';this.time=0; }
+    } else if(this.phase==='recover') {
+      this.bx=Math.min(648,this.bx+dt*510);
+      if(this.time>=1.35 && this.bx===648) {
+        this.phase='warning';this.time=0;this.attack=(this.attack+1)%3;this.target=this.x;
+      }
     }
     return null;
   }
 }
 
-function oval(c,x,y,rx,ry,fill) {
-  c.beginPath(); c.ellipse(x,y,rx,ry,0,0,Math.PI*2); c.fillStyle=fill; c.fill();
+function fighter(c,x,y,pose,alpha=1) {
+  c.save(); c.globalAlpha=alpha; c.translate(x,y);
+  if(pose==='roll') {c.translate(0,-36);c.rotate(-1.4);c.translate(0,36);}
+  c.lineWidth=14;c.lineCap='round';c.strokeStyle='#28273b';
+  for(const foot of [-24,23]){c.beginPath();c.moveTo(0,-43);c.lineTo(foot,-4);c.stroke();}
+  c.fillStyle='#fff0cf';c.fillRect(-18,-89,38,48);
+  c.fillStyle='#d84422';c.fillRect(-18,-50,42,9);
+  c.font='55px sans-serif';c.textAlign='center';c.fillText('🧑‍🍳',1,-81);
+  c.strokeStyle='#e3ae77';c.lineWidth=10;c.beginPath();c.moveTo(8,-76);c.lineTo(35,-60);c.stroke();
+  c.strokeStyle='#d9efff';c.lineWidth=6;c.beginPath();c.moveTo(35,-60);
+  c.lineTo(pose==='slash'?125:66,pose==='slash'?-59:-115);c.stroke();c.restore();
 }
-function muscle(c,x,y,w,h) {
-  const g=c.createRadialGradient(x-w*.3,y-h*.35,2,x,y,Math.max(w,h));
-  g.addColorStop(0,'#ffe4a5'); g.addColorStop(.6,'#ca854c'); g.addColorStop(1,'#763e31');
-  oval(c,x,y,w,h,g);
-}
-function boss(c, mouth) {
-  for(const side of [-1,1]){
-    c.save(); c.scale(side,1);
-    muscle(c,96,20,45,40); muscle(c,138,4,32,49); muscle(c,147,-43,25,30);
-    muscle(c,53,38,58,33);
-    for(let i=0;i<3;i++) muscle(c,23,74+i*21,24-i*2,16);
-    c.restore();
+
+export function drawDuel(c,d) {
+  c.save();c.fillStyle='#120e27a8';c.fillRect(0,0,800,620);
+  c.fillStyle='#322531';c.fillRect(0,ground,800,155);
+  c.fillStyle='#ce9973';c.fillRect(0,ground,800,4);
+  const end=clamp(d.time/1.4,0,1), won=d.ending==='win',lost=d.ending==='loss';
+  const chefX=won?d.x+(d.bx-d.x-55)*end:d.x;
+  const bossX=lost?d.bx+(d.x-d.bx+30)*end:d.bx;
+  if(d.attack===1 && ['warning','strike'].includes(d.phase)){
+    c.fillStyle='#ff502d66';c.fillRect(d.target-63,ground-8,126,8);
+    c.font='48px sans-serif';c.fillText('🌶️',d.target-24,d.phase==='warning'?160:Math.min(ground,160+690*d.time));
   }
-  muscle(c,0,-54,87,77);
-  c.strokeStyle='#975a3b'; c.lineWidth=4;
-  for(const x of [-65,-35,0,35,65]){
-    c.beginPath();c.moveTo(0,-129);c.quadraticCurveTo(x*.8,-121,x,-82);c.stroke();
+  if(d.phase==='strike' && d.attack===0){
+    c.fillStyle='#ffab30';c.beginPath();c.moveTo(d.wave-35,ground);c.lineTo(d.wave,ground-60);c.lineTo(d.wave+30,ground);c.fill();
   }
-  muscle(c,0,-129,14,14);
-  for(const side of [-1,1]){
-    c.save();c.scale(side,1);c.rotate(-.18);
-    oval(c,33,-53,16,8,'#fff3bc');oval(c,30,-54,5,6,'#41171b');c.restore();
+  c.save();c.translate(bossX,ground-103+(won?end*60:0));
+  const size=won?1-end:1;c.scale(size*.85,size*.85);boss(c,lost?1:d.phase==='warning'?.45:0);c.restore();
+  for(const s of d.shots) {
+    if(s.move==='clone'){fighter(c,s.x-28,ground,'slash',.25);fighter(c,s.x,ground,'slash',.65);}
+    else {c.save();c.shadowColor='#20deff';c.shadowBlur=28;c.fillStyle='#8df5ff';c.beginPath();c.arc(s.x,ground-68-s.y,24,0,7);c.fill();c.strokeStyle='white';c.beginPath();c.ellipse(s.x,ground-68-s.y,21,8,s.x/35,0,7);c.stroke();c.restore();}
   }
-  oval(c,0,-22,37,9+mouth*22,'#521d20');
-  for(const x of [-20,0,20]){c.fillStyle='#fff3bf';c.beginPath();c.moveTo(x-4,-30-mouth*12);c.lineTo(x+4,-30-mouth*12);c.lineTo(x,-19-mouth*12);c.fill();}
-  for(const [x,y,r] of [[-63,-32,6],[-56,-27,3],[64,37,7],[71,45,3],[-128,9,5],[33,78,4]]){
-    oval(c,x,y,r,r*.75,'#9c2227');oval(c,x+1,y+r,r*.28,r*1.4,'#a12526');
-  }
-}
-export function drawDuel(c,d){
-  c.save();
-  c.fillStyle='#220f1b70'; c.fillRect(0,0,800,620);
-  const bite=Math.min(1,d.bite/1.2);
-  const won=d.ending==='win', lost=d.ending==='loss';
-  const bossSize=won?1-bite:1+bite*.5;
-  c.save();c.translate(400,290+(won?bite*160:lost?bite*90:Math.sin(d.elapsed*4)*5));c.scale(bossSize,bossSize);
-  boss(c,lost?Math.sin(bite*Math.PI):d.open?.45:0);c.restore();
-  c.save();c.translate(400,484-(lost?bite*130:0));
-  const chefSize=lost?1-bite:1+bite*.4;c.scale(chefSize,chefSize);
-  c.font='76px sans-serif';c.textAlign='center';c.fillText(won&&bite>.65?'😋':'🧑‍🍳',0,0);
-  if(!d.ending){c.translate(35,-30);c.rotate(d.flash>0?-1:.2);c.font='65px sans-serif';c.fillText('🗡️',20,0);}
-  c.restore();
-  c.textAlign='center';c.fillStyle='#fff4d2';c.font='bold 31px sans-serif';
-  c.fillText(d.ending?(won?'You feast on the boss!':'The boss eats you!'):'Khinkali Boss',400,60);
-  for(let i=0;i<d.settings.health;i++){let x=400+(i-(d.settings.health-1)/2)*29;c.fillStyle=i<d.hp?'#f15335':'#653b39';c.fillRect(x-11,80,22,8);}
-  c.font='bold 23px sans-serif';
-  if(!d.ending)c.fillText(d.open?'Opening! Swing now':'Watch for an opening…',400,545);
-  c.restore();
+  fighter(c,chefX,ground-d.height,d.roll?'roll':d.slash||won?'slash':'idle',lost?1-end:d.hit?.55:1);
+  if(won && end>.4 && end<.85){c.strokeStyle='white';c.lineWidth=9;c.beginPath();c.moveTo(bossX-90,ground-25);c.lineTo(bossX+65,ground-205);c.stroke();}
+  c.fillStyle='#fff1cf';c.font='bold 23px sans-serif';c.textAlign='left';c.fillText('CHEF',35,54);
+  c.textAlign='right';c.fillText('KHINKALI BOSS',765,54);c.fillStyle='#49333c';c.fillRect(525,67,240,12);
+  c.fillStyle='#f35d40';c.fillRect(765-240*d.hp/d.settings.health,67,240*d.hp/d.settings.health,12);
+  c.fillStyle='#ffda88';c.textAlign='center';c.font='bold 25px sans-serif';
+  const caption=won?'FATALITY · Dinner is served':lost?'The boss devours you':d.phase==='finish'?'FINISH HIM · Press F':d.phase==='recover'?'Boss recovering':attacks[d.attack];
+  c.fillText(caption,400,132);c.restore();
 }
