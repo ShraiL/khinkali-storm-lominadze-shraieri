@@ -21,3 +21,13 @@ input { border-radius:10px }
 .rule-note { margin-top:15px }
 .connection { padding:6px 10px; border-radius:18px; background:#fff1dc }
 @media(max-width:500px){.hud { gap:5px }.hud>div { padding:5px 8px }.rules,.leaderboard { padding:16px }.stage{height:510px}.overlay h1{font-size:clamp(44px,15vw,64px)}}
+.slotbar{display:flex;align-items:center;gap:12px;padding:7px 12px;background:#432b24;color:#ffdc94;border:2px solid #ac7442;border-radius:12px;margin-bottom:8px;font:bold 12px monospace}
+.slotbar small{margin-left:auto;font-weight:normal}
+#slots{display:flex;gap:4px}
+#slots b{display:grid;place-items:center;width:32px;height:28px;background:#ffebc6;border-radius:5px;filter:grayscale(1) brightness(.62)}
+#slots .filled{filter:sepia(.6) saturate(3);box-shadow:0 0 7px #ffbc44}
+#difficulty{width:100%;padding:7px;border-radius:7px;background:#fff4df;color:#38261a}
+label[for=difficulty]{margin-top:9px}
+#swing{position:absolute;z-index:1;bottom:2%;left:50%;transform:translateX(-50%);white-space:nowrap;padding:9px 20px;border-radius:22px;background:#ffcf67;border:2px solid #5e3621;font-weight:bold;color:#40251a}
+#swing:disabled{opacity:.75}
+@media(max-width:480px){.slotbar{gap:6px;font-size:10px}.slotbar small{max-width:90px}.stage{min-height:530px}}

@@ -1,3 +1,4 @@
+import { difficulties, Duel, drawDuel } from './duel.js';
 import { startLeaderboard, refreshLeaderboard, submitScore } from './api.js';
 import { mountainScene } from './scenery.js';
 import { Player } from './player.js';
@@ -16,6 +17,16 @@ let score = 0;
 let lives = 3;
 let level = 1;
 let state = 'menu';
+let settings = difficulties.medium;
+let gold = 0;
+let duel;
+let resumeState;
+const swing = document.getElementById('swing');
+function renderSlots() {
+  const slots = document.getElementById('slots');
+  slots.setAttribute('aria-label', gold + ' of 3 golden khinkali');
+  [...slots.children].forEach((slot,i) => slot.classList.toggle('filled', i < gold));
+}
 let spawnTimer = 0;
 let previousTime = 0;
 let name = '';
@@ -24,6 +35,10 @@ let round = 0;
 function startGame() {
   name = playerName();
   if (!name) return;
+  settings = difficulties[document.getElementById('difficulty').value];
+  gold = 0;
+  renderSlots();
+  swing.hidden = true;
   document.activeElement?.blur();
   round++;
   document.getElementById('save-status').textContent = ''; 
@@ -42,8 +57,10 @@ function startGame() {
 }
 
 function togglePause() {
-  if (state !== 'playing' && state !== 'paused') return;
-  state = state === 'playing' ? 'paused' : 'playing';
+  if (!['playing','duel','paused'].includes(state)) return;
+  if (state !== 'paused') resumeState = state;
+  state = state === 'paused' ? resumeState : 'paused';
+  swing.hidden = state !== 'duel';
   keys.clear();
   showScreen(state);
 }
@@ -54,7 +71,7 @@ function update(seconds) {
   player.update(seconds, direction, canvas.width);
   slowTime = Math.max(0, slowTime - seconds);
   if (catchLabel) catchLabel.time -= seconds;
-  const fallSeconds = seconds * (slowTime > 0 ? 0.5 : 1);
+  const fallSeconds = seconds * settings.speed * (slowTime > 0 ? 0.5 : 1);
   spawnTimer -= fallSeconds;
   if (spawnTimer <= 0) {
     items.push(spawnItem(canvas.width));
@@ -72,7 +89,29 @@ function update(seconds) {
       level = Math.floor(score / 200) + 1;
       items.splice(i, 1);
       updateHUD(score, lives, level);
+      if (item.type === 'gold') {
+        gold++;
+        renderSlots();
+        if (gold === 3) {
+          duel = new Duel(settings);
+          state = 'duel';
+          swing.hidden = false;
+          keys.clear();
+          return;
+        }
+      }
       if (lives === 0) {
+        endRound();
+        return;
+      }
+    } else if (item.y > canvas.height + item.radius) {
+      items.splice(i, 1);
+    }
+  }
+}
+
+function endRound() {
+  swing.hidden = true;
         state = 'gameover';
         keys.clear();
         finishGame(score);
@@ -85,16 +124,14 @@ function update(seconds) {
               : 'Score not uploaded. Your personal best is saved in this browser when storage is available.';
           }
         });
-        return;
-      }
-    } else if (item.y > canvas.height + item.radius) {
-      items.splice(i, 1);
-    }
-  }
 }
 
 function draw() {
   ctx.drawImage(backdrop, 0, 0);
+  if (state === 'duel' || (state === 'paused' && resumeState === 'duel')) {
+    drawDuel(ctx, duel);
+    return;
+  }
   ctx.font = 'bold 23px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff6dc';
@@ -111,6 +148,22 @@ function frame(time) {
   const seconds = Math.min((time - previousTime) / 1000, 0.04);
   previousTime = time;
   if (state === 'playing') update(seconds);
+  if (state === 'duel') {
+    const outcome = duel.tick(seconds, () => {
+      lives--;
+      updateHUD(score,lives,level);
+      return lives;
+    });
+    swing.disabled = !duel.open || Boolean(duel.ending);
+    if (outcome === 'loss') endRound();
+    if (outcome === 'win') {
+      gold = 0;
+      renderSlots();
+      items = [];
+      swing.hidden = true;
+      state = 'playing';
+    }
+  }
   draw();
   requestAnimationFrame(frame);
 }
@@ -123,8 +176,14 @@ document.getElementById('home').addEventListener('click', () => {
   state = 'menu'; showScreen(state); refreshLeaderboard(); document.getElementById('name').focus();
 });
 for (const id of ['pause', 'resume']) document.getElementById(id).addEventListener('click', togglePause);
+swing.addEventListener('click', () => { if (state === 'duel') duel.swing(); });
 window.addEventListener('keydown', (event) => {
   if (event.target instanceof HTMLInputElement) return;
+  if (state === 'duel' && event.code === 'Space') {
+    event.preventDefault();
+    if (!event.repeat) duel.swing();
+    return;
+  }
   const key = event.key.toLowerCase();
   if (['arrowleft', 'arrowright', 'a', 'd', 'p', 'escape'].includes(key)) {
     event.preventDefault();
@@ -134,7 +193,7 @@ window.addEventListener('keydown', (event) => {
 });
 window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
 window.addEventListener('blur', () => {
-  keys.clear(); if (state === 'playing') togglePause();
+  keys.clear(); if (state === 'playing' || state === 'duel') togglePause();
 });
 for (const [id, key] of [['left', 'arrowleft'], ['right', 'arrowright']]) {
   const button = document.getElementById(id);
