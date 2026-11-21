@@ -82,7 +82,8 @@ export class Duel {
         contact=Math.abs(this.bx-this.x)<85;
         done=this.bx<=70;
       }
-      if(contact && !this.connected && !this.roll) {
+      if(contact && this.roll) this.connected=true;
+      if(contact && !this.connected) {
         this.connected=true; this.hit=.35;
         if(hurt()===0) { this.phase='ending'; this.ending='loss'; this.time=0; }
       }
